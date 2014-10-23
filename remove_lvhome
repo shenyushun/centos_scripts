@@ -1,0 +1,41 @@
+#!/bin/sh
+# remove centos vm /home  /dev/vggroup/lv_home  
+# mearge / partition
+lvroot=`lvdisplay | grep lv_root | head -n 1 | awk '{print $3}'`
+
+lvhome=`lvdisplay | grep lv_home | head -n 1 | awk '{print $3}'`
+
+lvsize=`lvdisplay | grep Size | head -n 2 | tail -n 1 | awk '{print $3}'`
+
+echo "lvroot:$lvroot"
+echo "lvhome:$lvhome"
+echo "lvsize:$lvsize"
+
+if [[ -n $lvhome ]];then
+        echo "umont and remove $lvhome"
+        umount $lvhome
+        lvremove $lvhome
+
+        echo "extend..."
+        lvsize=${lvsize%.*}
+	echo "lvsize:$lvsize"
+        lvlen=`echo ${#lvsize}`
+	echo "lvlen:$lvlen"
+
+        lsize=${lvsize:0:lvlen}
+	echo "lsize:$lsize"
+        echo ${#lsize}
+        xstr="lvextend -L+"$lsize"G "$lvroot""
+        #lvextend -L+"$lsize"G $lvroot
+        echo $xstr
+        echo `$xstr`
+        echo "resize..."
+
+        resize2fs "$lvroot"
+
+        echo "extend lv success"
+        df -h
+        
+        echo "modify /etc/fstab"
+        sed -i.bak 's!/dev/mapper/VolGroup-lv_home!#/dev/mapper/VolGroup-lv_home!g' /etc/fstab
+fi
